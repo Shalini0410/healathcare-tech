@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000/api'
+  : 'https://doctor-appointment-backend.onrender.com/api';
 let currentUser = JSON.parse(localStorage.getItem('user'));
 let currentToken = localStorage.getItem('token');
 let selectedDoctorId = null;
