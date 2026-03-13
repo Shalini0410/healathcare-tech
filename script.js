@@ -211,22 +211,23 @@ async function confirmBooking() {
   if (!date) return showToast('Please select a date', 'error');
 
   if (USE_DEMO) {
-    // Check for conflict against ALL appointments (other patients too)
-    const conflict = DEMO_ALL_APPOINTMENTS.find(a => 
-      a.doctor.name.includes(document.getElementById('booking-doctor-name').textContent.replace('🩺 Booking with Dr. ', '')) && 
-      a.date === date && 
-      a.timeSlot === timeSlot &&
-      (a.status === 'Booked' || a.status === 'Completed')
-    );
+    const doctorName = document.getElementById('booking-doctor-name').textContent.replace('🩺 Booking with Dr. ', '').trim();
+    
+    // Check for conflict against ALL appointments
+    const conflict = DEMO_ALL_APPOINTMENTS.find(a => {
+      const matchDoctor = (a.doctor?.name === doctorName) || (a.doctor === doctorName);
+      return matchDoctor && 
+             a.date === date && 
+             a.timeSlot === timeSlot &&
+             (a.status === 'Booked' || a.status === 'Completed');
+    });
 
     if (conflict) {
-      return showToast(`Slot Conflict! This time is already booked by another patient.`, 'error');
+      console.log('Conflict detected:', conflict);
+      return showToast(`Already Booked! Dr. ${doctorName} is busy at this time.`, 'error');
     }
 
-    const doctorName = document.getElementById('booking-doctor-name').textContent.replace('🩺 Booking with Dr. ', '');
     myAppointments.unshift({ doctor: { name: doctorName }, date, timeSlot, status: 'Booked' });
-    
-    // Add to global admin list
     DEMO_ALL_APPOINTMENTS.unshift({ _id: Date.now().toString(), patient: { name: currentUser.name }, doctor: { name: doctorName }, date, timeSlot, status: 'Booked' });
 
     showToast('Appointment successfully booked ✅');
