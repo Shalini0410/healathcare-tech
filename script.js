@@ -86,8 +86,8 @@ async function handleLogin() {
   });
 
   if (USE_DEMO) {
-    const role = email.includes('admin') ? 'admin' : 'patient';
-    currentUser = { id: 'demo1', name: email.split('@')[0], role };
+    const role = email.toLowerCase().includes('doctor') ? 'doctor' : 'patient';
+    currentUser = { id: 'demo1', name: email.split('@')[0], email: email, role };
     currentToken = 'demo-token';
     localStorage.setItem('user', JSON.stringify(currentUser));
     localStorage.setItem('token', currentToken);
@@ -121,9 +121,15 @@ function initApp() {
     return;
   }
 
-  nav.innerHTML = `<span style="color:var(--text-dim);margin-right:1rem;">👤 ${currentUser.name}</span><button onclick="handleLogout()">Logout</button>`;
+  // FIXED HEADER: Showing Name and Role
+  nav.innerHTML = `
+    <div style="text-align:right;">
+        <span style="display:block; font-size:0.9rem; font-weight:700;">${currentUser.name}</span>
+        <span style="display:block; font-size:0.75rem; color:var(--text-dim); margin-bottom:0.5rem;">${currentUser.email || ''} (${currentUser.role})</span>
+        <button onclick="handleLogout()" style="padding:0.3rem 0.8rem; font-size:0.75rem;">Logout</button>
+    </div>`;
 
-  if (currentUser.role === 'admin') {
+  if (currentUser.role === 'doctor') {
     document.getElementById('admin-dashboard').style.display = 'block';
     loadAdminData();
   } else {
