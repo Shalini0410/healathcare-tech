@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000/api'
+  : `https://${window.location.hostname}/api`;
 
 // ── DEMO / MOCK DATA ───────────────────────────────────────────
 const DEMO_DOCTORS = [
@@ -15,22 +17,23 @@ const DEMO_APPOINTMENTS = [
 ];
 
 let DEMO_ALL_APPOINTMENTS = [
-  { patient: { name: 'Shalini' }, doctor: { name: 'Kumar' }, date: '2026-03-20', timeSlot: '10:00 AM', status: 'Booked' },
-  { patient: { name: 'Rahul' }, doctor: { name: 'Priya' }, date: '2026-03-18', timeSlot: '11:00 AM', status: 'Booked' },
+  { _id: 'da1', patient: { name: 'Shalini' }, doctor: { name: 'Kumar' }, date: '2026-03-20', timeSlot: '10:00 AM', status: 'Booked' },
+  { _id: 'da2', patient: { name: 'Rahul' }, doctor: { name: 'Priya' }, date: '2026-03-18', timeSlot: '11:00 AM', status: 'Booked' },
 ];
 
-let USE_DEMO = true; // flips to false when real backend responds
+let USE_DEMO = true;
 
 async function safeFetch(url, opts) {
   try {
     const res = await fetch(url, opts);
-    USE_DEMO = false;
+    if (res.ok) USE_DEMO = false;
     return res;
   } catch {
     USE_DEMO = true;
     return null;
   }
 }
+
 // ───────────────────────────────────────────────────────────────
 
 let currentUser = JSON.parse(localStorage.getItem('user'));
@@ -83,7 +86,6 @@ async function handleLogin() {
   });
 
   if (USE_DEMO) {
-    // Demo login — auto create user from input
     const role = email.includes('admin') ? 'admin' : 'patient';
     currentUser = { id: 'demo1', name: email.split('@')[0], role };
     currentToken = 'demo-token';
@@ -130,7 +132,25 @@ function initApp() {
   }
 }
 
-async function loadPatientData() { loadDoctors(); renderAppointments(); }
+async function loadPatientData() { 
+  loadDoctors(); 
+  renderAppointments(); 
+  updateReminder();
+}
+
+function updateReminder() {
+  const next = myAppointments.find(a => a.status === 'Booked');
+  const reminderDiv = document.getElementById('reminder-box');
+  if (next) {
+    reminderDiv.innerHTML = `
+      <div style="background:rgba(59, 130, 246, 0.1); border:1px solid var(--primary); padding:1.25rem; border-radius:1rem; margin-bottom:2.5rem; border-left: 5px solid var(--primary);">
+        <h4 style="color:var(--accent); margin-bottom:0.25rem; display:flex; align-items:center; gap:0.5rem;">🔔 Next Appointment Reminder</h4>
+        <p style="font-size:0.95rem;">You have a scheduled visit with <strong>Dr. ${next.doctor.name}</strong> on <strong>${next.date}</strong> at <strong>${next.timeSlot}</strong>.</p>
+      </div>`;
+  } else {
+    reminderDiv.innerHTML = '';
+  }
+}
 
 async function loadDoctors() {
   const res = await safeFetch(`${API_URL}/doctors`);
@@ -163,6 +183,7 @@ async function loadAppointments() {
   const res = await safeFetch(`${API_URL}/appointments/user/${currentUser.id}`);
   if (!USE_DEMO) { myAppointments = await res.json(); }
   renderAppointments();
+  updateReminder();
 }
 
 function openBookingModal(id, name) {
@@ -185,9 +206,14 @@ async function confirmBooking() {
     if (dupe) return showToast('This slot is already booked!', 'error');
     const doctorName = document.getElementById('booking-doctor-name').textContent.replace('🩺 Booking with Dr. ', '');
     myAppointments.unshift({ doctor: { name: doctorName }, date, timeSlot, status: 'Booked' });
+    
+    // Add to admin list too
+    DEMO_ALL_APPOINTMENTS.unshift({ _id: Date.now().toString(), patient: { name: currentUser.name }, doctor: { name: doctorName }, date, timeSlot, status: 'Booked' });
+
     showToast('Appointment successfully booked ✅');
     closeBookingModal();
     renderAppointments();
+    updateReminder();
   } else {
     const res = await safeFetch(`${API_URL}/appointments`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -198,7 +224,7 @@ async function confirmBooking() {
   }
 }
 
-// Admin
+// Admin Logic
 let adminDoctors = [...DEMO_DOCTORS];
 
 async function loadAdminData() {
@@ -206,24 +232,38 @@ async function loadAdminData() {
   if (!USE_DEMO) adminDoctors = await dRes.json();
 
   document.getElementById('admin-doctor-list').innerHTML = adminDoctors.map(d => `
-    <div class="doctor-card">
-      <h3>Dr. ${d.name}</h3>
-      <p class="spec">${d.specialization}</p>
-      <p class="availability">📅 ${d.availableDays.join(', ')}</p>
-      <button class="btn-primary" style="background:var(--error)" onclick="deleteDoctor('${d._id}')">🗑 Delete</button>
+    <div class="doctor-card" style="padding: 1.5rem;">
+      <h4 style="margin-bottom:0.25rem;">Dr. ${d.name}</h4>
+      <p class="spec" style="margin-bottom:0.75rem;">${d.specialization}</p>
+      <button class="btn-primary" style="background:rgba(239, 68, 68, 0.2); color:var(--error); padding: 0.5rem; font-size: 0.75rem;" onclick="deleteDoctor('${d._id}')">🗑 Delete Doctor</button>
     </div>
   `).join('');
 
   const aRes = await safeFetch(`${API_URL}/appointments`);
   const apps = USE_DEMO ? DEMO_ALL_APPOINTMENTS : await aRes.json();
   document.getElementById('admin-appointment-list').innerHTML = apps.length
-    ? apps.map(a => `
+    ? apps.map((a, idx) => `
         <div class="history-item">
           <strong>👤 ${a.patient?.name || 'Patient'}</strong><br>
           Dr. ${a.doctor?.name || 'Doctor'}<br>
-          <small>📅 ${a.date} &nbsp;⏰ ${a.timeSlot}</small>
+          <small>📅 ${a.date} &nbsp;⏰ ${a.timeSlot}</small><br>
+          <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
+             <span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span>
+             ${a.status === 'Booked' ? `
+               <button onclick="updateAppStatus(${idx}, 'Completed')" style="background:none; border:none; color:var(--success); font-size:0.75rem; cursor:pointer; font-weight:700; text-decoration:underline;">Complete</button>
+               <button onclick="updateAppStatus(${idx}, 'Cancelled')" style="background:none; border:none; color:var(--error); font-size:0.75rem; cursor:pointer; font-weight:700; text-decoration:underline;">Cancel</button>
+             ` : ''}
+          </div>
         </div>`).join('')
     : '<p style="color:var(--text-dim);text-align:center;padding:1rem;">No appointments.</p>';
+}
+
+function updateAppStatus(idx, status) {
+  if (USE_DEMO) {
+    DEMO_ALL_APPOINTMENTS[idx].status = status;
+    showToast(`Appointment marked as ${status}`);
+    loadAdminData();
+  }
 }
 
 async function handleAddDoctor() {
@@ -234,14 +274,14 @@ async function handleAddDoctor() {
 
   if (USE_DEMO) {
     adminDoctors.unshift({ _id: Date.now().toString(), name, specialization, availableDays: days.length ? days : ['Monday'] });
-    showToast(`Dr. ${name} added ✅`);
+    showToast(`Dr. ${name} added successfully ✅`);
     document.getElementById('doc-name-inp').value = '';
     document.getElementById('doc-spec-inp').value = '';
     document.getElementById('doc-days-inp').value = '';
     loadAdminData();
   } else {
     await safeFetch(`${API_URL}/doctors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, specialization, availableDays: days }) });
-    showToast('Doctor added ✅');
+    showToast('Doctor added successfully ✅');
     loadAdminData();
   }
 }
@@ -249,11 +289,11 @@ async function handleAddDoctor() {
 async function deleteDoctor(id) {
   if (USE_DEMO) {
     adminDoctors = adminDoctors.filter(d => d._id !== id);
-    showToast('Doctor deleted');
+    showToast('Doctor removed from system');
     loadAdminData();
   } else {
     await safeFetch(`${API_URL}/doctors/${id}`, { method: 'DELETE' });
-    showToast('Doctor deleted');
+    showToast('Doctor removed from system');
     loadAdminData();
   }
 }
