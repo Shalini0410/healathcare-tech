@@ -92,7 +92,10 @@ async function handleLogin() {
     localStorage.setItem('user', JSON.stringify(currentUser));
     localStorage.setItem('token', currentToken);
     showToast(`Welcome, ${currentUser.name}! (Demo mode)`);
-    initApp();
+    
+    // Add smooth transition
+    document.getElementById('auth-screen').classList.add('fade-out');
+    setTimeout(() => initApp(), 400);
   } else {
     const data = await res.json();
     if (res.ok) {
