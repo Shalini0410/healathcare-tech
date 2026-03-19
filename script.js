@@ -244,7 +244,7 @@ async function confirmBooking() {
   }
 }
 
-// Admin Logic
+// Admin/Doctor Logic
 let adminDoctors = [...DEMO_DOCTORS];
 
 async function loadAdminData() {
@@ -252,36 +252,64 @@ async function loadAdminData() {
   if (!USE_DEMO) adminDoctors = await dRes.json();
 
   document.getElementById('admin-doctor-list').innerHTML = adminDoctors.map(d => `
-    <div class="doctor-card" style="padding: 1.5rem;">
-      <h4 style="margin-bottom:0.25rem;">Dr. ${d.name}</h4>
-      <p class="spec" style="margin-bottom:0.75rem;">${d.specialization}</p>
-      <button class="btn-primary" style="background:rgba(239, 68, 68, 0.2); color:var(--error); padding: 0.5rem; font-size: 0.75rem;" onclick="deleteDoctor('${d._id}')">🗑 Delete Doctor</button>
+    <div class="doctor-card">
+      <div class="info">
+        <h3>Dr. ${d.name}</h3>
+        <p class="spec">${d.specialization}</p>
+        <p class="availability">📅 ${d.availableDays.join(', ')}</p>
+      </div>
+      <button class="btn-small btn-cancel" onclick="deleteDoctor('${d._id}')">🗑 Remove</button>
     </div>
   `).join('');
 
   const aRes = await safeFetch(`${API_URL}/appointments`);
   const apps = USE_DEMO ? DEMO_ALL_APPOINTMENTS : await aRes.json();
-  document.getElementById('admin-appointment-list').innerHTML = apps.length
-    ? apps.map((a, idx) => `
+
+  // Update Counters
+  const total = apps.length;
+  const seen = apps.filter(a => a.status === 'Completed').length;
+  const waiting = apps.filter(a => a.status === 'Booked' || a.status === 'In-Progress').length;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-seen').textContent = seen;
+  document.getElementById('stat-waiting').textContent = waiting;
+
+  // Render Chronological Schedule
+  const sortedApps = [...apps].sort((a, b) => {
+    const dateA = new Date(a.date + ' ' + (a.timeSlot.includes('AM') || a.timeSlot.includes('PM') ? a.timeSlot : ''));
+    const dateB = new Date(b.date + ' ' + (b.timeSlot.includes('AM') || b.timeSlot.includes('PM') ? b.timeSlot : ''));
+    return dateA - dateB;
+  });
+
+  document.getElementById('admin-appointment-list').innerHTML = sortedApps.length
+    ? sortedApps.map((a) => {
+        // Find index in DEMO_ALL_APPOINTMENTS for status updates
+        const realIdx = USE_DEMO ? DEMO_ALL_APPOINTMENTS.findIndex(item => item._id === a._id) : -1;
+        return `
         <div class="history-item">
-          <strong>👤 ${a.patient?.name || 'Patient'}</strong><br>
-          Dr. ${a.doctor?.name || 'Doctor'}<br>
-          <small>📅 ${a.date} &nbsp;⏰ ${a.timeSlot}</small><br>
-          <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
-             <span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span>
+          <div class="info">
+            <strong>👤 ${a.patient?.name || 'Patient'}</strong><br>
+            <small>Dr. ${a.doctor?.name || 'Doctor'} • 📅 ${a.date} • ⏰ ${a.timeSlot}</small><br>
+            <span class="status-badge status-${a.status.toLowerCase().replace('in-progress', 'progress')}">${a.status}</span>
+          </div>
+          <div class="actions">
              ${a.status === 'Booked' ? `
-               <button onclick="updateAppStatus(${idx}, 'Completed')" style="background:none; border:none; color:var(--success); font-size:0.75rem; cursor:pointer; font-weight:700; text-decoration:underline;">Complete</button>
-               <button onclick="updateAppStatus(${idx}, 'Cancelled')" style="background:none; border:none; color:var(--error); font-size:0.75rem; cursor:pointer; font-weight:700; text-decoration:underline;">Cancel</button>
+               <button class="btn-small btn-progress" onclick="updateAppStatus(${realIdx}, 'In-Progress')">In-Progress</button>
+             ` : ''}
+             ${a.status !== 'Completed' && a.status !== 'Cancelled' ? `
+               <button class="btn-small btn-complete" onclick="updateAppStatus(${realIdx}, 'Completed')">Complete</button>
+               <button class="btn-small btn-cancel" onclick="updateAppStatus(${realIdx}, 'Cancelled')">Cancel</button>
              ` : ''}
           </div>
-        </div>`).join('')
-    : '<p style="color:var(--text-dim);text-align:center;padding:1rem;">No appointments.</p>';
+        </div>`;
+      }).join('')
+    : '<p style="color:var(--text-dim);text-align:center;padding:1rem;">No appointments scheduled.</p>';
 }
 
 function updateAppStatus(idx, status) {
-  if (USE_DEMO) {
+  if (USE_DEMO && idx !== -1) {
     DEMO_ALL_APPOINTMENTS[idx].status = status;
-    showToast(`Appointment marked as ${status}`);
+    showToast(`Status updated to ${status}`);
     loadAdminData();
   }
 }

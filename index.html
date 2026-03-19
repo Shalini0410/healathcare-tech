@@ -84,18 +84,34 @@
 
             <!-- Doctor Dashboard (Initially Hidden) -->
             <div id="admin-dashboard" style="display: none;">
+                <!-- Stats Bar -->
+                <div class="stats-header">
+                    <div class="stat-card">
+                        <h4>Total Appointments</h4>
+                        <div class="value" id="stat-total">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Patients Seen</h4>
+                        <div class="value" id="stat-seen">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Waiting Room</h4>
+                        <div class="value" id="stat-waiting">0</div>
+                    </div>
+                </div>
+
                 <div class="dashboard-grid">
                     <div>
                         <h2>Doctor Management Panel</h2>
-                        <div class="auth-card" style="max-width: none; margin: 1rem 0; padding: 1.5rem;">
-                            <h3>Add New Doctor</h3>
+                        <div class="auth-card" style="max-width: none; margin: 0 0 2rem 0; padding: 1.5rem;">
+                            <h3 style="margin-bottom: 1rem;">Add New Doctor</h3>
                             <div class="form-group">
                                 <label>Doctor Name</label>
-                                <input type="text" id="doc-name-inp">
+                                <input type="text" id="doc-name-inp" placeholder="Dr. Jane Smith">
                             </div>
                             <div class="form-group">
                                 <label>Specialization</label>
-                                <input type="text" id="doc-spec-inp">
+                                <input type="text" id="doc-spec-inp" placeholder="Cardiologist">
                             </div>
                             <div class="form-group">
                                 <label>Available Days (Comma separated)</label>
@@ -106,8 +122,10 @@
                         <div class="doctor-list" id="admin-doctor-list"></div>
                     </div>
                     <div>
-                        <h2>Patient Appointment Records</h2>
-                        <div class="history-list" id="admin-appointment-list"></div>
+                        <h2>Appointment Schedule</h2>
+                        <div class="history-list" id="admin-appointment-list">
+                            <!-- Populated via JS -->
+                        </div>
                     </div>
                 </div>
             </div>
