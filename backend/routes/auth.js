@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Doctor = require('../models/Doctor');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -13,6 +14,17 @@ router.post('/register', async (req, res) => {
 
     const user = new User({ name, email, password, role });
     await user.save();
+
+    if (role === 'doctor') {
+      const doctorProfile = new Doctor({ 
+        userId: user._id, 
+        name: user.name, 
+        specialization: 'General', 
+        availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
+      });
+      await doctorProfile.save();
+    }
+
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

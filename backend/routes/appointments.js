@@ -36,6 +36,39 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
+// Get doctor appointments
+router.get('/doctor/:doctorId', async (req, res) => {
+  try {
+    const appointments = await Appointment.find({ doctor: req.params.doctorId }).populate('patient');
+    res.json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update appointment medical record (Diagnosis/Treatment)
+router.put('/:id/record', async (req, res) => {
+  try {
+    const { diagnosis, treatmentRecord, notes, status } = req.body;
+    
+    // Only update fields that are provided
+    const updateData = {};
+    if (diagnosis !== undefined) updateData.diagnosis = diagnosis;
+    if (treatmentRecord !== undefined) updateData.treatmentRecord = treatmentRecord;
+    if (notes !== undefined) updateData.notes = notes;
+    if (status !== undefined) updateData.status = status;
+
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+    res.json(appointment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get all appointments (Admin)
 router.get('/', async (req, res) => {
   try {
