@@ -86,7 +86,7 @@ async function handleLogin() {
   });
 
   if (USE_DEMO) {
-    const role = email.toLowerCase().includes('doctor') ? 'doctor' : 'patient';
+    const role = email.toLowerCase().includes('doctor') || email.toLowerCase().includes('admin') ? 'doctor' : 'patient';
     currentUser = { id: 'demo1', name: email.split('@')[0], email: email, role };
     currentToken = 'demo-token';
     localStorage.setItem('user', JSON.stringify(currentUser));
@@ -145,8 +145,13 @@ function initApp() {
         <button onclick="handleLogout()" style="padding:0.3rem 0.8rem; font-size:0.75rem;">Logout</button>
     </div>`;
 
-  if (currentUser.role === 'doctor') {
+  if (currentUser.role === 'doctor' || currentUser.role === 'admin') {
     document.getElementById('admin-dashboard').style.display = 'block';
+    
+    // Set Dashboard title
+    const titleObj = document.getElementById('doctor-dashboard-title');
+    if (titleObj) titleObj.textContent = `${currentUser.specialization || 'Doctor'} Dashboard - Schedule`;
+
     loadAdminData();
   } else {
     document.getElementById('patient-dashboard').style.display = 'block';
@@ -156,8 +161,7 @@ function initApp() {
 
 async function loadPatientData() { 
   loadDoctors(); 
-  renderAppointments(); 
-  updateReminder();
+  loadAppointments(); 
 }
 
 function updateReminder() {
