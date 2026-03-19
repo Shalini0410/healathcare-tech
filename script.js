@@ -102,6 +102,19 @@ async function handleLogin() {
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token);
       currentUser = data.user; currentToken = data.token;
+      
+      // If doctor, fetch their specific doctorId
+      if (currentUser.role === 'doctor') {
+         const dRes = await fetch(`${API_URL}/doctors`);
+         const allDoc = await dRes.json();
+         const myDocProfile = allDoc.find(d => d.userId === currentUser.id);
+         if (myDocProfile) {
+            localStorage.setItem('doctorId', myDocProfile._id);
+            currentUser.doctorId = myDocProfile._id;
+            currentUser.specialization = myDocProfile.specialization;
+         }
+      }
+
       initApp();
     } else { showToast(data.message, 'error'); }
   }
@@ -177,15 +190,50 @@ async function loadDoctors() {
 }
 
 function renderAppointments() {
-  const list = document.getElementById('appointment-history');
-  if (!myAppointments.length) { list.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:1rem;">No appointments yet.</p>'; return; }
-  list.innerHTML = myAppointments.map(a => `
+  const upcomingList = document.getElementById('appointment-upcoming');
+  const historyList = document.getElementById('appointment-history');
+  
+  if (!upcomingList || !historyList) return;
+
+  const upcoming = myAppointments.filter(a => a.status === 'Booked' || a.status === 'In-Progress');
+  const history = myAppointments.filter(a => a.status === 'Completed' || a.status === 'Cancelled');
+
+  const renderCard = (a) => {
+    return `
     <div class="history-item">
-      <strong>Dr. ${a.doctor.name}</strong><br>
-      <small>📅 ${a.date} &nbsp;⏰ ${a.timeSlot}</small><br>
-      <span class="status-badge status-${a.status.toLowerCase()}">${a.status}</span>
-    </div>
-  `).join('');
+      <div class="info">
+        <strong>Dr. ${a.doctor?.name || 'Unknown'}</strong><br>
+        <small>📅 ${a.date} &nbsp;⏰ ${a.timeSlot}</small><br>
+        <span class="status-badge status-${a.status.toLowerCase().replace('in-progress', 'progress')}">${a.status}</span>
+      </div>
+      ${a.status === 'Completed' && (a.diagnosis || a.treatmentRecord) ? `
+      <div class="actions">
+        <button class="btn-small btn-progress" onclick="viewMedicalRecord('${a.diagnosis || ''}', '${(a.treatmentRecord || '').replace(/'/g, "\\'")}', '${(a.notes || '').replace(/'/g, "\\'")}')">View Record</button>
+      </div>` : ''}
+    </div>`;
+  };
+
+  upcomingList.innerHTML = upcoming.length ? upcoming.map(renderCard).join('') : '<p style="color:var(--text-dim);padding:0.5rem 0;">No upcoming appointments.</p>';
+  historyList.innerHTML = history.length ? history.map(renderCard).join('') : '<p style="color:var(--text-dim);padding:0.5rem 0;">No past history.</p>';
+}
+
+function viewMedicalRecord(diagnosis, treatment, notes) {
+  document.getElementById('record-title').textContent = 'Your Medical Record';
+  document.getElementById('record-diagnosis').value = diagnosis;
+  document.getElementById('record-treatment').value = treatment;
+  document.getElementById('record-notes').value = notes;
+  
+  // Make inputs read-only for patient
+  document.getElementById('record-diagnosis').readOnly = true;
+  document.getElementById('record-treatment').readOnly = true;
+  document.getElementById('record-notes').readOnly = true;
+  document.getElementById('record-save-btn').style.display = 'none';
+  
+  document.getElementById('record-modal').style.display = 'flex';
+}
+
+function closeRecordModal() {
+  document.getElementById('record-modal').style.display = 'none';
 }
 
 async function loadAppointments() {
@@ -262,8 +310,13 @@ async function loadAdminData() {
     </div>
   `).join('');
 
-  const aRes = await safeFetch(`${API_URL}/appointments`);
-  const apps = USE_DEMO ? DEMO_ALL_APPOINTMENTS : await aRes.json();
+  let apps = [];
+  if (USE_DEMO) {
+      apps = DEMO_ALL_APPOINTMENTS.filter(a => a.doctor.name === currentUser.name);
+  } else {
+      const aRes = await safeFetch(`${API_URL}/appointments/doctor/${currentUser.doctorId}`);
+      if (aRes) apps = await aRes.json();
+  }
 
   // Update Counters
   const total = apps.length;
@@ -289,16 +342,16 @@ async function loadAdminData() {
         <div class="history-item">
           <div class="info">
             <strong>👤 ${a.patient?.name || 'Patient'}</strong><br>
-            <small>Dr. ${a.doctor?.name || 'Doctor'} • 📅 ${a.date} • ⏰ ${a.timeSlot}</small><br>
+            <small>📅 ${a.date} • ⏰ ${a.timeSlot}</small><br>
             <span class="status-badge status-${a.status.toLowerCase().replace('in-progress', 'progress')}">${a.status}</span>
           </div>
           <div class="actions">
              ${a.status === 'Booked' ? `
-               <button class="btn-small btn-progress" onclick="updateAppStatus(${realIdx}, 'In-Progress')">In-Progress</button>
+               <button class="btn-small btn-progress" onclick="updateAppStatus(${realIdx}, 'In-Progress', '${a._id}')">In-Progress</button>
              ` : ''}
              ${a.status !== 'Completed' && a.status !== 'Cancelled' ? `
-               <button class="btn-small btn-complete" onclick="updateAppStatus(${realIdx}, 'Completed')">Complete</button>
-               <button class="btn-small btn-cancel" onclick="updateAppStatus(${realIdx}, 'Cancelled')">Cancel</button>
+               <button class="btn-small btn-complete" onclick="openMedicalRecordModal(${realIdx}, '${a._id}')">Complete Rec.</button>
+               <button class="btn-small btn-cancel" onclick="updateAppStatus(${realIdx}, 'Cancelled', '${a._id}')">Cancel</button>
              ` : ''}
           </div>
         </div>`;
@@ -306,11 +359,73 @@ async function loadAdminData() {
     : '<p style="color:var(--text-dim);text-align:center;padding:1rem;">No appointments scheduled.</p>';
 }
 
-function updateAppStatus(idx, status) {
+function updateAppStatus(idx, status, id) {
   if (USE_DEMO && idx !== -1) {
     DEMO_ALL_APPOINTMENTS[idx].status = status;
     showToast(`Status updated to ${status}`);
     loadAdminData();
+  } else if (!USE_DEMO) {
+    safeFetch(`${API_URL}/appointments/${id}/record`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).then(() => {
+        showToast(`Status updated to ${status}`);
+        loadAdminData();
+    });
+  }
+}
+
+let currentEditingAppId = null;
+let currentEditingIdx = null;
+
+function openMedicalRecordModal(idx, id) {
+  currentEditingIdx = idx;
+  currentEditingAppId = id;
+
+  document.getElementById('record-title').textContent = 'Add Patient Medical Record';
+  document.getElementById('record-diagnosis').value = '';
+  document.getElementById('record-treatment').value = '';
+  document.getElementById('record-notes').value = '';
+  
+  // Make inputs editable
+  document.getElementById('record-diagnosis').readOnly = false;
+  document.getElementById('record-treatment').readOnly = false;
+  document.getElementById('record-notes').readOnly = false;
+  document.getElementById('record-save-btn').style.display = 'block';
+  
+  document.getElementById('record-modal').style.display = 'flex';
+}
+
+async function saveRecordBtnClick() {
+  const diagnosis = document.getElementById('record-diagnosis').value.trim();
+  const treatment = document.getElementById('record-treatment').value.trim();
+  const notes = document.getElementById('record-notes').value.trim();
+
+  if (!diagnosis || !treatment) return showToast('Diagnosis and Treatment are required', 'error');
+
+  if (USE_DEMO && currentEditingIdx !== -1) {
+    DEMO_ALL_APPOINTMENTS[currentEditingIdx].status = 'Completed';
+    DEMO_ALL_APPOINTMENTS[currentEditingIdx].diagnosis = diagnosis;
+    DEMO_ALL_APPOINTMENTS[currentEditingIdx].treatmentRecord = treatment;
+    DEMO_ALL_APPOINTMENTS[currentEditingIdx].notes = notes;
+    
+    showToast('Record saved & Appointment Completed');
+    closeRecordModal();
+    loadAdminData();
+  } else {
+    const res = await safeFetch(`${API_URL}/appointments/${currentEditingAppId}/record`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ diagnosis, treatmentRecord: treatment, notes, status: 'Completed' })
+    });
+    
+    if (res && res.ok) {
+       showToast('Record saved & Appointment Completed');
+       closeRecordModal();
+       loadAdminData();
+    } else {
+       showToast('Failed to save record', 'error');
+    }
   }
 }
 
