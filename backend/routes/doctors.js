@@ -26,7 +26,7 @@ router.post('/', async (req, res) => {
 // Update doctor
 router.put('/:id', async (req, res) => {
   try {
-    const doctor = await Doctor.findByIdAndUpdate(req.id, req.body, { new: true });
+    const doctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(doctor);
   } catch (error) {
     res.status(500).json({ message: error.message });

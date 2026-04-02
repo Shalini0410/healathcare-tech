@@ -1,68 +1,80 @@
-# Modern Healthcare Management System 🏥
+# DocScheduler | Modern Healthcare Management System 🏥
 
-A comprehensive, full-stack web application designed to seamlessly connect patients and doctors. This system serves as a centralized platform for booking appointments, managing doctor schedules without conflicts, and securely tracking patient medical histories.
+[![Vercel](https://img.shields.io/badge/Frontend-Vercel-black?style=flat&logo=vercel)](https://vercel.com)
+[![Render](https://img.shields.io/badge/Backend-Render-darkblue?style=flat&logo=render)](https://render.com)
+[![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=flat&logo=mongodb)](https://www.mongodb.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Built as a Final-Year Capstone Project, focusing on dynamic role-based workflows and intuitive UI/UX.
+A premium, full-stack healthcare platform designed to bridge the gap between patients and medical professionals. **DocScheduler** offers a sleek, Glassmorphism-inspired interface for managing appointments, tracking medical records, and optimizing doctor workflows.
 
 ---
 
-## 🚀 Key Features
+## ✨ Key Features
 
 ### 👤 For Patients
-*   **Intelligent Booking**: Browse available specialists and book time slots easily.
-*   **Conflict Prevention**: Real-time validation ensures no double-booking for the same time slot and doctor.
-*   **Medical History Tracking**: Access a dedicated "Past Medical History" tab to view permanent, doctor-certified diagnoses and prescribed treatment plans.
-*   **Upcoming Alerts**: Clear visual reminders of scheduled appointments.
+- **Glassmorphism UI**: High-end clinical design with smooth micro-animations.
+- **Intelligent Booking**: Real-time slot management with conflict prevention.
+- **Medical History**: Access secure, doctor-certified diagnosis and treatment plans.
+- **Dynamic Dashboards**: Personalized views for upcoming and past appointments.
 
 ### 👨‍⚕️ For Doctors
-*   **Tailored Dashboards**: A personalized interface displaying only the specific doctor's daily queue and appointments.
-*   **Live Queue Counters**: Real-time stats on "Total Appointments", "Patients Seen", and the active "Waiting Room".
-*   **Interactive Medical Records**: One-click workflow to mark an appointment as 'Completed' and instantly generate an official medical record (Diagnosis, Treatment, Notes) permanently saved to the patient's history.
+- **Workflow Optimization**: Real-time stats for appointments, patients seen, and current waiting room.
+- **Medical Records Engine**: Seamlessly transition from visit to record generation with one click.
+- **Specialist Management**: Easily add and manage doctor profiles and specialties.
+- **Automated Queuing**: Chronological appointment tracking for better time management.
 
 ---
 
 ## 🛠️ Technology Stack
-This application follows a robust multi-tier architecture:
 
-*   **Frontend**: HTML5, CSS3 (Custom Glassmorphism styling, CSS Variables, Keyframe Animations), Vanilla JavaScript (ES6+).
-*   **Backend API**: Node.js, Express.js (RESTful architecture).
-*   **Database**: MongoDB (Mongoose Schema Design) - NoSQL document structure.
-*   **Security**: JSON Web Tokens (JWT) for route protection, `bcryptjs` for secure password hashing.
+- **Frontend**: HTML5, Vanilla JavaScript (ES6+), Premium CSS3 (Custom Design System, Glassmorphism).
+- **Icons**: Lucide Icons for high-fidelity visual cues.
+- **Backend API**: Node.js & Express.js (RESTful Architecture).
+- **Database**: MongoDB (Mongoose Schema Design).
+- **Authentication**: JWT (JSON Web Tokens) with `bcryptjs` password hashing.
+- **Deployment**: Vercel (Frontend), Render (Backend).
+
+---
+
+## 🚀 Live Demo & Deployment
+
+### [LIVE LINK COMING SOON]
+
+> [!TIP]
+> The application includes a robust **Demo Mode**. Even if the backend isn't reachable, you can explore most features offline!
 
 ---
 
 ## ⚙️ Installation & Local Setup
 
-### 1. Clone the repository
+### 1. Clone & Structure
 ```bash
 git clone https://github.com/Shalini0410/healathcare-tech.git
 cd healathcare-tech
 ```
 
-### 2. Setup the Backend
-Open a terminal and navigate to the backend folder:
+### 2. Backend Setup
 ```bash
 cd backend
 npm install
-```
-Create a `.env` file in the `backend` directory with the following variables:
-```env
-PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-```
-Start the backend server:
-```bash
+# Create .env with MONGO_URI, JWT_SECRET, and PORT=5000
 npm start
 ```
-*The server will run on `http://localhost:5000`*
 
-### 3. Run the Frontend
-Because the frontend uses vanilla HTML/CSS/JS, you can simply open the `index.html` file in your preferred web browser, or use an extension like VSCode Live Server.
-
-*(Note: The `script.js` uses dynamic logic to fall back to a "Demo Mode" if the backend is unreachable, ensuring the UI can always be presented).*
+### 3. Frontend Setup
+```bash
+cd frontend
+# Simply open index.html or use Live Server extension
+```
 
 ---
-## ✨ Development Focus
-- **User Experience Strategy**: Designed with a calm blue-and-white clinical palette, utilizing modern 'Inter' typography and smooth transition animations to minimize cognitive load.
-- **Database Modeling**: Careful linkage between `User`, `Doctor`, and `Appointment` schemas to ensure strict data privacy—doctors only access records they are authorized to see.
+
+## 📈 Development Focus
+- **Premium Aesthetics**: Engineered with a calm HSL palette and 'Outfit' typography to minimize cognitive load.
+- **Scalability**: Decoupled frontend/backend architecture ready for cloud deployment.
+- **UX Strategy**: Simplified workflows for both patients and medical staff.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
